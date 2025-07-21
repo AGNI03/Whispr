@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
-import EmojiPicker from "./EmojiPicker";
+import EmojiPicker from 'emoji-picker-react';
 import { Image, Send, X, Smile } from "lucide-react";
 import toast from "react-hot-toast";
 
 const MessageInput = () => {
   const [text, setText] = useState("");
+  const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
   const { sendMessage } = useChatStore();
@@ -23,11 +24,10 @@ const MessageInput = () => {
     reader.readAsDataURL(file);
   };
 
-  // ---------------------------
-  const addEmoji = () => {
-    const emoji = "😀";
-    setText((prevText) => prevText + emoji);
-    };
+  // ------------------------------
+  const handleEmojiClick = (emojiData) => {
+    setText((prev) => prev + emojiData.emoji);
+  };
   // ------------------------------
 
   const removeImage = () => {
@@ -78,6 +78,8 @@ const MessageInput = () => {
 
       <form onSubmit={handleSendMessage} className="flex items-center gap-2">
         <div className="flex-1 flex gap-2">
+
+          {/* message input */}
           <input
             type="text"
             className="w-full input input-bordered rounded-lg input-sm sm:input-md"
@@ -85,14 +87,18 @@ const MessageInput = () => {
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-          {/* ------------------------------ */}
-          <div className="dropdown dropdown-top dropdown-center">
-             <button type="button" tabIndex={0} role="button" className="btn hidden sm:flex btn-circle"><Smile size={20} /></button>
-            <div tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-              <EmojiPicker/>
+
+          {/* emoji picker */}
+          <button type="button" className="btn sm:flex btn-circle" onClick={() => setEmojiPickerVisible(!emojiPickerVisible)}>
+            <Smile size={20} />
+          </button>
+          {emojiPickerVisible && 
+            <div className="fixed bottom-30 right-40 z-50">
+              <EmojiPicker theme="dark" onEmojiClick={handleEmojiClick} /> 
             </div>
-          </div>
-          {/* ----------------------- */}
+          }
+
+          {/* image upload */}
           <input
             type="file"
             accept="image/*"
@@ -100,7 +106,7 @@ const MessageInput = () => {
             ref={fileInputRef}
             onChange={handleImageChange}
           />
-          
+          {/* image upload button */}
           <button
             type="button"
             className={`hidden sm:flex btn btn-circle
@@ -110,6 +116,8 @@ const MessageInput = () => {
             <Image size={20} />
           </button>
         </div>
+
+        {/* send button */}
         <button
           type="submit"
           className="btn btn-primary h-10 min-h-0 hover:bg-primary-focus"
@@ -117,6 +125,7 @@ const MessageInput = () => {
         >
           <Send size={22} />
         </button>
+
       </form>
     </div>
   );
