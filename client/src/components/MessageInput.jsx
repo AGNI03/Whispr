@@ -24,11 +24,9 @@ const MessageInput = () => {
     reader.readAsDataURL(file);
   };
 
-  // ------------------------------
   const handleEmojiClick = (emojiData) => {
     setText((prev) => prev + emojiData.emoji);
   };
-  // ------------------------------
 
   const removeImage = () => {
     setImagePreview(null);
@@ -87,16 +85,15 @@ const MessageInput = () => {
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-
           {/* emoji picker */}
-          <button type="button" className="btn sm:flex btn-circle" onClick={() => setEmojiPickerVisible(!emojiPickerVisible)}>
-            <Smile size={20} />
-          </button>
-          {emojiPickerVisible && 
-            <div className="fixed bottom-30 right-40 z-50">
-              <EmojiPicker theme="dark" onEmojiClick={handleEmojiClick} /> 
-            </div>
-          }
+            <button type="button" className="btn sm:flex btn-circle" onClick={() => setEmojiPickerVisible(!emojiPickerVisible)}>
+              <Smile size={20} />
+            </button>
+            {emojiPickerVisible && 
+              <div className="absolute bottom-27 right-35 z-50">
+                <EmojiPicker theme="dark"  emojiStyle="native" onEmojiClick={handleEmojiClick} />
+              </div>
+            }
 
           {/* image upload */}
           <input
@@ -111,10 +108,11 @@ const MessageInput = () => {
             type="button"
             className={`hidden sm:flex btn btn-circle
                      ${imagePreview ? "text-emerald-500" : ""}`}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {setEmojiPickerVisible(false);fileInputRef.current?.click()}}
           >
             <Image size={20} />
           </button>
+
         </div>
 
         {/* send button */}
@@ -122,6 +120,7 @@ const MessageInput = () => {
           type="submit"
           className="btn btn-primary h-10 min-h-0 hover:bg-primary-focus"
           disabled={!text.trim() && !imagePreview}
+          onClick={()=>setEmojiPickerVisible(false)}
         >
           <Send size={22} />
         </button>
