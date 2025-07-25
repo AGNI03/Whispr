@@ -22,7 +22,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="h-screen pt-20">
+    <div className="h-full pt-20">
       <div className="max-w-2xl mx-auto p-4 py-8">
         <div className="bg-base-300 rounded-xl p-6 space-y-8">
           <div className="text-center">
@@ -34,11 +34,13 @@ const ProfilePage = () => {
 
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <img
-                src={selectedImg || authUser.profilePic || "/avatar.png"}
-                alt="Profile"
-                className="size-32 rounded-full object-cover border-4 "
-              />
+              {(selectedImg || authUser.profilePic)
+              ? (<img
+                  src={selectedImg || authUser.profilePic || "/avatar.png"}
+                  alt="Profile"
+                  className="size-32 rounded-full object-cover border-4 "/>)
+              : <User className="size-32 text-gray-400 rounded-full object-cover border-4 border-base-content" />
+              }
               <label
                 htmlFor="avatar-upload"
                 className={`

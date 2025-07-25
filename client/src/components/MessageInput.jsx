@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker from "emoji-picker-react";
 import { Image, Send, X, Smile } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -9,14 +9,22 @@ const MessageInput = () => {
   const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
-  const { sendMessage } = useChatStore();
+
+  const {
+    sendMessage,
+    sendGroupMessage,
+    selectedGroup,
+  } = useChatStore();
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+    if (!file) return;
+
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result);
@@ -38,12 +46,11 @@ const MessageInput = () => {
     if (!text.trim() && !imagePreview) return;
 
     try {
-      await sendMessage({
+      await (selectedGroup ? sendGroupMessage : sendMessage)({
         text: text.trim(),
         image: imagePreview,
       });
 
-      // Clear form
       setText("");
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -64,8 +71,7 @@ const MessageInput = () => {
             />
             <button
               onClick={removeImage}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300
-              flex items-center justify-center"
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300 flex items-center justify-center"
               type="button"
             >
               <X className="size-3" />
@@ -74,59 +80,69 @@ const MessageInput = () => {
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-        <div className="flex-1 flex gap-2">
+      <div className="relative w-full">
+        {emojiPickerVisible && (
+          <div className="absolute bottom-12 right-0 z-50">
+            <EmojiPicker
+              theme="dark"
+              emojiStyle="native"
+              onEmojiClick={handleEmojiClick}
+            />
+          </div>
+        )}
 
-          {/* message input */}
-          <input
-            type="text"
-            className="w-full input input-bordered rounded-lg input-sm sm:input-md"
-            placeholder="Type a message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-          {/* emoji picker */}
-            <button type="button" className="btn sm:flex btn-circle" onClick={() => setEmojiPickerVisible(!emojiPickerVisible)}>
+        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+          <div className="flex-1 flex gap-2">
+            <input
+              type="text"
+              className="w-full input input-bordered rounded-lg input-sm sm:input-md"
+              placeholder="Type a message..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+
+            <button
+              type="button"
+              className="btn btn-circle"
+              onClick={() => setEmojiPickerVisible(!emojiPickerVisible)}
+            >
               <Smile size={20} />
             </button>
-            {emojiPickerVisible && 
-              <div className="absolute bottom-27 right-35 z-50">
-                <EmojiPicker theme="dark"  emojiStyle="native" onEmojiClick={handleEmojiClick} />
-              </div>
-            }
 
-          {/* image upload */}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-          />
-          {/* image upload button */}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+            />
+
+            <button
+              type="button"
+              className={`hidden sm:flex btn btn-circle ${
+                imagePreview ? "text-emerald-500" : ""
+              }`}
+              onClick={() => {
+                setEmojiPickerVisible(false);
+                fileInputRef.current?.click();
+              }}
+            >
+              <Image size={20} />
+            </button>
+          </div>
+
           <button
-            type="button"
-            className={`hidden sm:flex btn btn-circle
-                     ${imagePreview ? "text-emerald-500" : ""}`}
-            onClick={() => {setEmojiPickerVisible(false);fileInputRef.current?.click()}}
+            type="submit"
+            className="btn btn-primary h-10 min-h-0 hover:bg-primary-focus"
+            disabled={!text.trim() && !imagePreview}
+            onClick={() => setEmojiPickerVisible(false)}
           >
-            <Image size={20} />
+            <Send size={22} />
           </button>
-
-        </div>
-
-        {/* send button */}
-        <button
-          type="submit"
-          className="btn btn-primary h-10 min-h-0 hover:bg-primary-focus"
-          disabled={!text.trim() && !imagePreview}
-          onClick={()=>setEmojiPickerVisible(false)}
-        >
-          <Send size={22} />
-        </button>
-
-      </form>
+        </form>
+      </div>
     </div>
   );
 };
+
 export default MessageInput;

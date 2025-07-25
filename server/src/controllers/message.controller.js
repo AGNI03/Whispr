@@ -7,7 +7,9 @@ import { getReceiverSocketId, io } from "../lib/socket.js";
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+    const filteredUsers = await User.find({
+      _id: { $ne: loggedInUserId },
+    }).select("-password");
 
     res.status(200).json(filteredUsers);
   } catch (error) {
@@ -16,36 +18,23 @@ export const getUsersForSidebar = async (req, res) => {
   }
 };
 
-export const getGroupsForSidebar = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const groups = await Group.find({ membersId: userId }).select("name groupPic adminId");
-    if (!groups) return res.status(404).json({ error: "No groups found" });
-    res.status(200).json(groups);
-  } catch (error) {
-    console.error("Error fetching user groups:", error.message);
-    res.status(500).json({ error: "Failed to fetch groups" });
-  }
-}
-
 export const getMessages = async (req, res) => {
   try {
     const { id } = req.params; // could be userId or groupId
     const myId = req.user._id;
     const { isGroup } = req.query; // boolean flag
-
     let messages;
     if (isGroup === "true") {
       // Fetch group messages
-      messages = await Message.find({ groupId: id })
+      messages = await Message.find({ groupId: id });
     } else {
       // Fetch direct messages between two users
-        messages = await Message.find({
-          $or: [
-            { senderId: myId, receiverId: id },
-            { senderId: id, receiverId: myId },
-          ],
-        });
+      messages = await Message.find({
+        $or: [
+          { senderId: myId, receiverId: id },
+          { senderId: id, receiverId: myId },
+        ],
+      });
     }
     res.status(200).json(messages);
   } catch (error) {
@@ -56,25 +45,30 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image, isGroup=false } = req.body;
-    const { id } = req.params; // either receiverId or groupId
+    const { text, image, isGroup = false } = req.body;
+    const { id } = req.params; // id = groupId or receiverId
     const senderId = req.user._id;
 
+    // Upload image if present
     let imageUrl;
     if (image) {
-      // Upload base64 image to cloudinary
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
     }
 
-    // Create a new message
     let newMessage;
-    if (isGroup){
-      // For group messages
+
+    if (isGroup) {
+      // Handle group message
       const group = await Group.findById(id);
       if (!group) return res.status(404).json({ error: "Group not found" });
-      // Check if the user is a member of the group
-      if (!group.membersId.includes(senderId)) return res.status(403).json({ error: "You are not a member of this group" });
+
+      if (!group.membersId.includes(senderId)) {
+        return res
+          .status(403)
+          .json({ error: "You are not a member of this group" });
+      }
+
       newMessage = new Message({
         senderId,
         groupId: id,
@@ -82,17 +76,21 @@ export const sendMessage = async (req, res) => {
         image: imageUrl,
       });
       await newMessage.save();
-      // Emit the message to all group members
-      group.membersId.forEach(memberId => {
-        const receiverSocketId = getReceiverSocketId(memberId);
-        if (receiverSocketId) {
-          io.to(receiverSocketId).emit("newGroupMessage", newMessage);
+
+      // Emit to all group members except sender
+      group.membersId.forEach((memberId) => {
+        if (memberId.toString() !== senderId.toString()) {
+          const receiverSocketId = getReceiverSocketId(memberId);
+          if (receiverSocketId) {
+            io.to(receiverSocketId).emit("newGroupMessage", newMessage);
+          }
         }
       });
-    } else{
+    } else {
+      // Handle private (1-to-1) message
       newMessage = new Message({
         senderId,
-        id,
+        receiverId: id, // fixed: not "id"
         text,
         image: imageUrl,
       });
@@ -103,10 +101,10 @@ export const sendMessage = async (req, res) => {
         io.to(receiverSocketId).emit("newMessage", newMessage);
       }
     }
-    
+
     res.status(201).json(newMessage);
   } catch (error) {
-    console.log("Error in sendMessage controller: ", error.message);
+    console.error("❌ Error in sendMessage:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
