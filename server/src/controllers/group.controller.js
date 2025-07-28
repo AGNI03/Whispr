@@ -73,21 +73,39 @@ export const updateGroup = async (req, res) => {
   try {
     const groupId = req.params.id;
     const { name, groupPic } = req.body;
+
     const group = await Group.findById(groupId);
     if (!group) return res.status(404).json({ error: "Group not found" });
+
     // Check if the user is an admin
-    if (group.adminId.toString() !== req.user.id)
+    if (group.adminId.toString() !== req.user.id) {
       return res.status(403).json({ error: "Only admin can update group" });
-    // Update group details
+    }
+
+    let hasChanges = false;
     const updateData = {};
-    if (name) updateData.name = name;
-    if (groupPic) {
+
+    // Check for name change
+    if (name && name !== group.name) {
+      updateData.name = name;
+      hasChanges = true;
+    }
+
+    // Check for groupPic change
+    if (groupPic && groupPic !== group.groupPic) {
       const uploadResponse = await cloudinary.uploader.upload(groupPic);
       updateData.groupPic = uploadResponse.secure_url;
+      hasChanges = true;
     }
+
+    if (!hasChanges) {
+      return res.status(400).json({ error: "No changes to update" });
+    }
+
     const updatedGroup = await Group.findByIdAndUpdate(groupId, updateData, {
       new: true,
     });
+
     res.status(200).json(updatedGroup);
   } catch (error) {
     console.error("Error updating group:", error.message);
@@ -101,9 +119,6 @@ export const getGroupsForSidebar = async (req, res) => {
     const groups = await Group.find({ membersId: userId }).select(
       "name groupPic adminId"
     );
-    if (!groups.length) {
-      return res.status(404).json({ error: "No groups found" });
-    }
     res.status(200).json(groups);
   } catch (error) {
     console.error("Error fetching user groups:", error.message);

@@ -6,6 +6,7 @@ import LoginPage from "./pages/LogInPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import CreateGroupPage from "./pages/CreateGroupPage";
+import GroupProfile from "./pages/GroupProfile";
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
@@ -45,6 +46,7 @@ const App = () => {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
         <Route path="/create-group" element={authUser ? <CreateGroupPage /> : <Navigate to="/login" />} />
+        <Route path="/group" element={authUser ? <GroupProfile /> : <Navigate to="/login" />} />
       </Routes>
 
       <Toaster />

@@ -66,12 +66,11 @@ const ChatContainer = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => {
           const isSelf = message.senderId === authUser._id;
-          const sender =
-            isSelf
-              ? authUser
-              : isGroupChat
-              ? message.sender // Should be populated with { name, profilePic }
-              : selectedUser;
+          const sender = isSelf
+            ? authUser
+            : isGroupChat
+            ? message.sender // Should be populated with { name, profilePic }
+            : selectedUser;
 
           return (
             <div
@@ -79,19 +78,22 @@ const ChatContainer = () => {
               className={`chat ${isSelf ? "chat-end" : "chat-start"}`}
               ref={messageEndRef}
             >
-              <div className="chat-image avatar">
-                <div className="size-10 rounded-full border">
-                  {sender?.profilePic ? (
-                    <img
-                      src={sender.profilePic}
-                      alt="profile"
-                      className="size-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="size-10 text-gray-400 rounded-full" />
-                  )}
+              {/* Show avatar only for group chats and when sender is not self */}
+              {isGroupChat && !isSelf && (
+                <div className="chat-image avatar">
+                  <div className="size-10 rounded-full border">
+                    {sender?.profilePic ? (
+                      <img
+                        src={sender.profilePic}
+                        alt="profile"
+                        className="size-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="size-10 text-gray-400 rounded-full" />
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="chat-header mb-1">
                 {!isSelf && isGroupChat && (

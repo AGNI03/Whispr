@@ -118,17 +118,13 @@ export const useChatStore = create((set, get) => ({
     socket.off("newGroupMessage");
   },
 
-  // Select user (clear group selection)
-  setSelectedUser: (user) => {
-    if (get().selectedUser?._id === user._id) return; // Avoid reselecting same user
-    set({ selectedUser: user, selectedGroup: null, messages: [] });
-    get().getMessages(user._id, false);
-  },
+setSelectedUser: (user) => {
+  set({ selectedUser: user, selectedGroup: null, messages: [] });
+  if (user) get().getMessages(user._id, false);
+},
 
-  // Select group (clear user selection)
-  setSelectedGroup: (group) => {
-    if (get().selectedGroup?._id === group._id) return; // Avoid reselecting same group
-    set({ selectedGroup: group, selectedUser: null, messages: [] });
-    get().getMessages(group._id, true);
-  },
+setSelectedGroup: (group) => {
+  set({ selectedGroup: group, selectedUser: null, messages: [] });
+  if (group) get().getMessages(group._id, true);
+},
 }));
