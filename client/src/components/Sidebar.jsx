@@ -27,7 +27,6 @@ const Sidebar = () => {
       await getGroups();
     };
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getUsers, getGroups]);
 
   const filteredUsers = showOnlineOnly

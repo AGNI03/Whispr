@@ -1,6 +1,8 @@
 import Group from "../models/group.model.js";
 import cloudinary from "../lib/cloudinary.js";
 
+
+// Group Creation Controller
 export const createGroup = async (req, res) => {
   try {
     const { name, groupPic } = req.body;
@@ -15,8 +17,7 @@ export const createGroup = async (req, res) => {
     const newGroup = await Group.create({
       name,
       adminId,
-      membersId: [adminId], // Admin is also a member
-      groupPic: imageUrl, // Save uploaded pic (or blank if none)
+      membersId: [adminId],
     });
 
     res.status(201).json(newGroup);
@@ -26,85 +27,70 @@ export const createGroup = async (req, res) => {
   }
 };
 
-export const addGroupMember = async (req, res) => {
-  try {
-    const groupId = req.params.id;
-    const { memberIds } = req.body; //array of user IDs to add
-    const group = await Group.findById(groupId);
-    if (!group) return res.status(404).json({ error: "Group not found" });
-    // Check if the user is an admin
-    if (group.adminId.toString() !== req.user.id)
-      return res.status(403).json({ error: "Only admin can add members" });
-    // Add members to the group
-    const uniqueNewMembers = memberIds.filter(
-      (id) => !group.membersId.includes(id)
-    );
-    group.membersId.push(...uniqueNewMembers);
-    await group.save();
-    res.status(200).json({ message: "Members added", group });
-  } catch (error) {
-    console.error("Error adding group members:", error.message);
-    res.status(500).json({ error: "Failed to add members" });
-  }
-};
-
-export const removeGroupMember = async (req, res) => {
-  try {
-    const groupId = req.params.id;
-    const { memberIds } = req.body; // ID of the user to remove
-    const group = await Group.findById(groupId);
-    if (!group) return res.status(404).json({ error: "Group not found" });
-    // Check if the user is an admin
-    if (group.adminId.toString() !== req.user.id)
-      return res.status(403).json({ error: "Only admin can add members" });
-    // Remove members from the group
-    group.membersId = group.membersId.filter(
-      (id) => !memberIds.includes(id.toString())
-    );
-    await group.save();
-    res.status(200).json({ message: "Members removed", group });
-  } catch (error) {
-    console.error("Error removing group members:", error.message);
-    res.status(500).json({ error: "Failed to remove members" });
-  }
-};
-
+// Group Update Controller
 export const updateGroup = async (req, res) => {
   try {
     const groupId = req.params.id;
-    const { name, groupPic } = req.body;
+    const {
+      name,
+      groupPic,
+      membersToAdd = [], // default to empty array if not provided
+      membersToRemove = [],
+    } = req.body;
 
     const group = await Group.findById(groupId);
     if (!group) return res.status(404).json({ error: "Group not found" });
 
-    // Check if the user is an admin
+    // Only admin can update the group
     if (group.adminId.toString() !== req.user.id) {
-      return res.status(403).json({ error: "Only admin can update group" });
+      return res.status(403).json({ error: "Only admin can update the group" });
     }
 
     let hasChanges = false;
     const updateData = {};
 
-    // Check for name change
+    // Check name change
     if (name && name !== group.name) {
       updateData.name = name;
       hasChanges = true;
     }
 
-    // Check for groupPic change
+    // Check groupPic update
     if (groupPic && groupPic !== group.groupPic) {
       const uploadResponse = await cloudinary.uploader.upload(groupPic);
       updateData.groupPic = uploadResponse.secure_url;
       hasChanges = true;
     }
 
-    if (!hasChanges) {
-      return res.status(400).json({ error: "No changes to update" });
+    // Filter and sanitize member arrays
+    const safeMembersToAdd = membersToAdd.filter(Boolean).map(String);
+    const safeMembersToRemove = membersToRemove.filter(Boolean).map(String);
+
+    // Apply member updates safely
+    if (safeMembersToAdd.length > 0 || safeMembersToRemove.length > 0) {
+      const updateOps = {};
+      if (safeMembersToAdd.length > 0) {
+        updateOps.$addToSet = { membersId: { $each: safeMembersToAdd } };
+      }
+      if (safeMembersToRemove.length > 0) {
+        updateOps.$pull = { membersId: { $in: safeMembersToRemove } };
+      }
+
+      await Group.findByIdAndUpdate(groupId, updateOps);
+      hasChanges = true;
     }
 
-    const updatedGroup = await Group.findByIdAndUpdate(groupId, updateData, {
-      new: true,
-    });
+    // Apply name and groupPic if needed
+    let updatedGroup = group;
+    if (hasChanges && Object.keys(updateData).length > 0) {
+      updatedGroup = await Group.findByIdAndUpdate(groupId, updateData, {
+        new: true,
+      });
+    }
+
+    updatedGroup = await Group.findById(groupId)
+      .populate("membersId", "name profilePic")
+      .populate("adminId", "name profilePic");
 
     res.status(200).json(updatedGroup);
   } catch (error) {
@@ -113,36 +99,16 @@ export const updateGroup = async (req, res) => {
   }
 };
 
+// Get Groups for Sidebar Controller
 export const getGroupsForSidebar = async (req, res) => {
   try {
     const userId = req.user.id;
     const groups = await Group.find({ membersId: userId }).select(
-      "name groupPic adminId"
+      "name groupPic adminId membersId"
     );
     res.status(200).json(groups);
   } catch (error) {
     console.error("Error fetching user groups:", error.message);
     res.status(500).json({ error: "Failed to fetch groups" });
-  }
-};
-
-export const getGroupDetails = async (req, res) => {
-  try {
-    const groupId = req.params.id;
-    const userId = req.user.id;
-    const group = await Group.findById(groupId)
-      .populate("membersId", "name profilePic")
-      .populate("adminId", "name profilePic");
-    if (!group) return res.status(404).json({ error: "Group not found" });
-    // Check if the user is a member of the group
-    if (!group.membersId.includes(userId))
-      return res
-        .status(403)
-        .json({ error: "You are not a member of this group" });
-    // Return group details
-    res.status(200).json(group);
-  } catch (error) {
-    console.error("Error fetching group details:", error.message);
-    res.status(500).json({ error: "Failed to fetch group details" });
   }
 };

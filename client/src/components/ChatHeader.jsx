@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { Users, User } from "lucide-react";
-import GroupProfile from "../pages/GroupProfile";
 
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser, selectedGroup, setSelectedGroup } =
@@ -16,7 +15,6 @@ const ChatHeader = () => {
   if (!target) return null; // Failsafe
 
   const name = target.fullName || target.name;
-  const avatar = target.profilePic || target.groupPic || "/avatar.png";
   const isOnline = onlineUsers.includes(target._id);
 
   return (

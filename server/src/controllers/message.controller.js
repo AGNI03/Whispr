@@ -4,6 +4,7 @@ import Group from "../models/group.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
+// Controller to get users for the sidebar
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
@@ -18,24 +19,30 @@ export const getUsersForSidebar = async (req, res) => {
   }
 };
 
+
+// Controller to get messages for a user or group
 export const getMessages = async (req, res) => {
   try {
     const { id } = req.params; // could be userId or groupId
     const myId = req.user._id;
     const { isGroup } = req.query; // boolean flag
+
     let messages;
+
     if (isGroup === "true") {
-      // Fetch group messages
-      messages = await Message.find({ groupId: id });
+      messages = await Message.find({ groupId: id }).populate(
+        "senderId",
+        "fullName profilePic"
+      );
     } else {
-      // Fetch direct messages between two users
       messages = await Message.find({
         $or: [
           { senderId: myId, receiverId: id },
           { senderId: id, receiverId: myId },
         ],
-      });
+      }).populate("senderId", "fullName profilePic");
     }
+
     res.status(200).json(messages);
   } catch (error) {
     console.log("Error in getMessages controller: ", error.message);
@@ -46,7 +53,7 @@ export const getMessages = async (req, res) => {
 export const sendMessage = async (req, res) => {
   try {
     const { text, image, isGroup = false } = req.body;
-    const { id } = req.params; // id = groupId or receiverId
+    const { id } = req.params;  // could be userId or groupId
     const senderId = req.user._id;
 
     // Upload image if present
@@ -59,7 +66,6 @@ export const sendMessage = async (req, res) => {
     let newMessage;
 
     if (isGroup) {
-      // Handle group message
       const group = await Group.findById(id);
       if (!group) return res.status(404).json({ error: "Group not found" });
 
@@ -76,8 +82,8 @@ export const sendMessage = async (req, res) => {
         image: imageUrl,
       });
       await newMessage.save();
+      await newMessage.populate("senderId", "fullName profilePic");
 
-      // Emit to all group members except sender
       group.membersId.forEach((memberId) => {
         if (memberId.toString() !== senderId.toString()) {
           const receiverSocketId = getReceiverSocketId(memberId);
@@ -87,14 +93,14 @@ export const sendMessage = async (req, res) => {
         }
       });
     } else {
-      // Handle private (1-to-1) message
       newMessage = new Message({
         senderId,
-        receiverId: id, // fixed: not "id"
+        receiverId: id,
         text,
         image: imageUrl,
       });
       await newMessage.save();
+      await newMessage.populate("senderId", "fullName profilePic");
 
       const receiverSocketId = getReceiverSocketId(id);
       if (receiverSocketId) {

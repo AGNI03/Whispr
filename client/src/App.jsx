@@ -36,7 +36,7 @@ const App = () => {
     );
 
   return (
-    <div data-theme={theme}>
+    <div data-theme={theme} className="select-none">
       <Navbar />
 
       <Routes>

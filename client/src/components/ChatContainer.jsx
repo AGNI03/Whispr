@@ -24,7 +24,6 @@ const ChatContainer = () => {
 
   const isGroupChat = Boolean(selectedGroup);
 
-  // Fetch messages when user or group is selected
   useEffect(() => {
     if (selectedUser || selectedGroup) {
       const id = isGroupChat ? selectedGroup._id : selectedUser._id;
@@ -65,12 +64,11 @@ const ChatContainer = () => {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => {
-          const isSelf = message.senderId === authUser._id;
-          const sender = isSelf
-            ? authUser
-            : isGroupChat
-            ? message.sender // Should be populated with { name, profilePic }
-            : selectedUser;
+          const isSelf =
+            message.senderId === authUser._id ||
+            message.senderId?._id === authUser._id;
+
+          const sender = isSelf ? authUser : message.senderId;
 
           return (
             <div
@@ -98,7 +96,7 @@ const ChatContainer = () => {
               <div className="chat-header mb-1">
                 {!isSelf && isGroupChat && (
                   <span className="text-sm font-semibold">
-                    {sender?.name || "User"}
+                    {sender?.fullName || "User"}
                   </span>
                 )}
                 <time className="text-xs opacity-50 ml-1">

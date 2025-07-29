@@ -38,7 +38,7 @@ const CreateGroupPage = () => {
     try {
       const res = await axiosInstance.post("/groups/create-group", {
         name: groupName,
-        groupPic: groupPic || "", // optional
+        groupPic: groupPic || "",
       });
 
       toast.success("Group created successfully");
@@ -46,8 +46,7 @@ const CreateGroupPage = () => {
       setGroupPic(null);
       setPreview("");
 
-      // Redirect to chat or group list (optional)
-      navigate("/"); // or wherever you handle chats
+      navigate("/");
     } catch (error) {
       console.error("Create group failed:", error);
       toast.error(error?.response?.data?.error || "Failed to create group");
@@ -123,7 +122,7 @@ const CreateGroupPage = () => {
           {/* Submit Button */}
           <button
             onClick={handleCreateGroup}
-            className="w-full py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition"
+            className="w-full py-2.5 bg-primary text-primary-content rounded-lg hover:bg-primary/90 transition"
             disabled={isCreating}
           >
             {isCreating ? "Creating..." : "Create Group"}
